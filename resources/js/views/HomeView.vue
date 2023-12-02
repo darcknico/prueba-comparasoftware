@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div class="mt-3">
         <div class="row">
             <template v-for="note in laravelData.data" :key="note.id">
                 <NoteComponent :note="note" ></NoteComponent>

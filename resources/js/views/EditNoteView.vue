@@ -1,27 +1,31 @@
 <template lang="">
-    <div>
-        <form @submit.prevent="handleSubmit">
+    <div class="mt-5">
+        <h2>{{ isEdit ? "Editar nota" : "Nueva nota" }}</h2>
+        <form class="row g-3" @submit.prevent="handleSubmit">
             <div class="form-group">
                 <label for="title">Titulo</label>
-                <input type="text" class="form-control" id="title" v-model="formData.title" required autocomplete="off">
+                <input type="text" class="form-control" id="title" v-model="formData.title" required maxlength="190" autocomplete="off">
             </div>
             <div class="form-group">
                 <label for="body">Text</label>
-                <textarea class="form-control" id="body" v-model="formData.body" rows="3"></textarea>
+                <textarea class="form-control" id="body" v-model="formData.body" maxlength="5000" rows="3"></textarea>
             </div>
-            <button type="submit" class="btn btn-primary mb-2">
-                {{ props.id>0 ? "Editar nota" : "Nueva nota" }}
+            <button type="submit" class="btn btn-primary mb-2" :disabled="isLoading">
+                {{ isEdit ? "Editar" : "Nuevo" }}
             </button>
         </form>
     </div>
 </template>
 <script setup>
-import { reactive, defineProps, onMounted } from "vue";
-import { useRouter } from "vue-router";
-
-import router from "../router";
+import { ref, reactive, defineProps, onMounted, watch } from "vue";
+import { useRoute, useRouter } from 'vue-router'
 
 const formData = reactive({});
+const isLoading = ref(false)
+const isEdit = ref(false)
+
+const route = useRoute()
+const router = useRouter()
 
 const props = defineProps( {
       id: {
@@ -29,22 +33,38 @@ const props = defineProps( {
         required: true,
       }
 })
-onMounted( () => {
-    if(props.id>0){
-        axios.get(`/api/notes/${props.id}`).then((response)=>{
+
+const fetchData = (id) => {
+    isEdit.value = id > 0;
+    if(id>0){
+        axios.get(`/api/notes/${id}`).then((response)=>{
             const note = response.data.data;
             formData.title = note.title;
             formData.body = note.body;
         });
+    } else {
+        formData.title = "";
+        formData.body = "";
     }
-} )
+}
 
+watch(
+    () => route.params.id,
+    (newId, oldId) => {
+        fetchData(+route.params.id)
+    }
+)
+
+onMounted( () => {
+    fetchData(+route.params.id)
+} )
 
 const handleSubmit = async () =>  {
     try {
         let response;
-        if(props.id>0){
-            response = await axios.put(`/api/notes/${props.id}`, formData);
+        isLoading.value = true;
+        if(route.params.id>0){
+            response = await axios.put(`/api/notes/${route.params.id}`, formData);
         } else {
             response = await axios.post('/api/notes', formData);
         }
@@ -52,6 +72,7 @@ const handleSubmit = async () =>  {
     } catch (error) {
         console.error("Error submitting form:", error);
     }
+    isLoading.value = false;
 }
 
 </script>
